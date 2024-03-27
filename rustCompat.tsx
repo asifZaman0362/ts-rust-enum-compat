@@ -1,12 +1,12 @@
 export type Result<T, E> = {Ok: T} | {Err: E};
 export type Option<T> = {Some: T} | 'None';
 
-type Variant<T extends object | string> = T extends object ? keyof T : T;
-type Value<T extends object | string> = T extends object
+export type Variant<T extends object | string> = T extends object ? keyof T : T;
+export type Value<T extends object | string> = T extends object
   ? T[keyof T]
   : undefined;
 
-function getVariant<T extends object | string>(value: T): Variant<T> {
+export function getVariant<T extends object | string>(value: T): Variant<T> {
   if (typeof value === 'object') {
     return Object.keys(value)[0] as Variant<T>;
   } else {
@@ -14,7 +14,7 @@ function getVariant<T extends object | string>(value: T): Variant<T> {
   }
 }
 
-function getValue<T extends object | string>(value: T): Value<T> {
+export function getValue<T extends object | string>(value: T): Value<T> {
   if (typeof value === 'object') {
     return Object.values(value)[0] as Value<T>;
   } else {
@@ -90,6 +90,26 @@ export function matchResult<T, E, R>(
   }
 }
 
+export function isVariant<T extends object | string, V extends T>(
+  e: T,
+  v: Variant<T>,
+): e is V {
+  return getVariant(e) === v;
+}
+
+export function match<T extends object | string, R>(
+  e: T,
+  a: EnumCallbackPair<T, R>[],
+  nomatch: () => R,
+): R {
+  for (let f of a) {
+    if (getVariant(e) == f[0]) {
+      return f[1](getValue(e));
+    }
+  }
+  return nomatch();
+}
+
 export function matchOption<T, R>(
   option: Option<T>,
   some: (value: T) => R,
@@ -101,3 +121,29 @@ export function matchOption<T, R>(
     return none();
   }
 }
+
+export function Ok<T>(value: T): {Ok: T} {
+  return {Ok: value};
+}
+
+export function Err<E>(err: E): {Err: E} {
+  return {Err: err};
+}
+
+export function Some<T>(value: T): {Some: T} {
+  return {Some: value};
+}
+
+export type None = 'None';
+
+export type EnumCallbackPair<T extends object | string, R> = T extends object
+  ? {[K in keyof T]: [kind: K, cb: (value: T[K]) => R]}[keyof T]
+  : [kind: T, cb: (value: any) => R];
+
+export type CallbackMap<T extends object | string, R> = T extends object
+  ? Map<{[K in keyof T]: K}[keyof T], (value: T[keyof T]) => R>
+  : Map<T, () => R>;
+
+export type EnumCallback<T extends object | string, R> = T extends object
+  ? {[K in keyof T]: (value: T[K]) => R}[keyof T]
+  : (value: any) => R;
